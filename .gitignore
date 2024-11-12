@@ -1,0 +1,15 @@
+# Environnement virtuel
+projet_7_env/
+
+# Cache Python
+__pycache__/
+
+# MLFlow logs
+mlruns/
+
+# Données
+data/
+
+# Configurations sensibles
+.env
+config.yaml
