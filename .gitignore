@@ -9,6 +9,8 @@ mlruns/
 
 # Données
 data/
+models/
+mlruns.db
 
 # Configurations sensibles
 .env
