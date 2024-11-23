@@ -22,7 +22,7 @@ class SentimentRequest(BaseModel):
 
 @app.get("/")
 def root():
-    return {"message": "Bienvenue dans l'API d'analyse de sentiment !"}
+    return {"message": "Bienvenue dans l'API d'analyse de sentiment !"}
 
 @app.post("/predict")
 def predict(request: SentimentRequest):
