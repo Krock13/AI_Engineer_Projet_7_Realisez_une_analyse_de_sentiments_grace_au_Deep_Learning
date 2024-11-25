@@ -1,35 +1,35 @@
-name: Deploy to Azure
+name: Deploy to Azure App Service
 
 on:
-    push:
-        branches:
-            - main
+  push:
+    branches:
+      - main
 
 jobs:
-    build-and-deploy:
-        runs-on: ubuntu-latest
+  build-and-deploy:
+    runs-on: ubuntu-latest
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v2
+    steps:
+      # Vérifier le dépôt
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-            - name: Set up Python
-              uses: actions/setup-python@v2
-              with:
-                  python-version: '3.8'
+      # Connexion à Azure
+      - name: Login to Azure
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-            - name: Install dependencies
-              run: |
-                  python -m pip install --upgrade pip
-                  pip install -r requirements.txt
+      # Construire et pousser l'image Docker sur ACR
+      - name: Build and Push Docker Image
+        run: |
+          az acr build --registry ${{ secrets.ACR_NAME }} \
+            --image ${{ secrets.ACR_NAME }}/sentiment-analysis:latest .
 
-            # Ici des étapes pour packager et préparer le déploiement
-
-            - name: Deploy to Azure Web App
-              env:
-                  AZURE_WEBAPP_NAME: ${{ secrets.AZURE_WEBAPP_NAME }}
-                  AZURE_WEBAPP_PUBLISH_PROFILE: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-              run: |
-                  echo "Déploiement de l'application sur Azure..."
-                  # Commande Azure CLI pour déployer
-                  az webapp up --name $AZURE_WEBAPP_NAME --sku F1 --location "West Europe"
+      # Déployer l'image sur App Service
+      - name: Deploy to Azure App Service
+        uses: azure/webapps-deploy@v2
+        with:
+          app-name: ${{ secrets.APP_SERVICE_NAME }}
+          slot-name: production
+          images: ${{ secrets.ACR_NAME }}/sentiment-analysis:latest
