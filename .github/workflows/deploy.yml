@@ -1,4 +1,4 @@
-name: Deploy to Azure App Service
+name: Build and Deploy to Azure
 
 on:
   push:
@@ -10,24 +10,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Vérifier le dépôt
+      # Étape 1 :
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Connexion à Azure
+      # Étape 2 : Login to Azure
       - name: Login to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Construire et pousser l'image Docker sur ACR
-      - name: Build and Push Docker Image
+      # Étape 3 : Login to ACR
+      - name: Login to ACR
         run: |
-          az acr build \
-            --registry ${{ secrets.ACR_NAME }} \
-            --image ${{ secrets.ACR_NAME }}/sentiment-analysis:latest .
+          az acr login --name ${{ secrets.ACR_NAME }}
 
-      # Déployer l'image sur App Service
+      # Étape 4 : Build Docker image locally
+      - name: Build Docker Image
+        run: |
+          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/sentiment-analysis:latest .
+
+      # Étape 5 : Push Docker image to ACR
+      - name: Push Docker Image
+        run: |
+          docker push ${{ secrets.ACR_NAME }}.azurecr.io/sentiment-analysis:latest
+
+      # Étape 6 : Configure App Service to use the Docker image
       - name: Deploy Image to Web App
         run: |
           az webapp config container set \
