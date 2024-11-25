@@ -1,0 +1,36 @@
+# Ignorer les fichiers et dossiers inutiles
+
+# Notebooks Jupyter
+*.ipynb
+
+# Dossier contenant les caches de pytest
+.pytest_cache/
+
+# Cache Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Modèles inutilisés
+models/
+
+# Modèles et vectorizers non nécessaires dans saved_models
+saved_models/count_vectorizer_vectorizer.pkl
+saved_models/logistic_regression_count_vectorizer.pkl
+
+# Données inutilisées dans data
+data/
+
+# Logs MLflow et autres fichiers inutiles
+mlruns/
+*.log
+
+# Environnement virtuel local
+projet_7_env/
+
+# Fichiers ou binaires liés à Git
+.git/
+
+# Dossier contenant les workflows GitHub Actions
+.github/
