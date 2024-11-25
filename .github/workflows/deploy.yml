@@ -40,8 +40,8 @@ jobs:
         run: |
           az webapp config container set \
             --name ${{ secrets.APP_SERVICE_NAME }} \
-            --resource-group SentimentAnalysisGroup \
+            --resource-group ${{ secrets.RESOURCE_GROUP }} \
             --docker-custom-image-name ${{ secrets.ACR_NAME }}.azurecr.io/sentiment-analysis:latest \
             --docker-registry-server-url https://${{ secrets.ACR_NAME }}.azurecr.io \
-            --docker-registry-server-user ${{ secrets.AZURE_CREDENTIALS.CLIENT_ID }} \
-            --docker-registry-server-password ${{ secrets.AZURE_CREDENTIALS.CLIENT_SECRET }}
+            --docker-registry-server-user ${{ secrets.ACR_NAME }} \
+            --docker-registry-server-password ${{ secrets.ACR_PASSWORD }}
