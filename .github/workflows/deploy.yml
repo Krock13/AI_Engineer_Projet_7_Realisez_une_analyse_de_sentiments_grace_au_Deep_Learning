@@ -3,7 +3,7 @@ name: Deploy to Azure App Service
 on:
   push:
     branches:
-      - main # Change si tu veux déclencher depuis une autre branche
+      - main
 
 jobs:
   build-and-deploy:
@@ -23,17 +23,17 @@ jobs:
       # Construire et pousser l'image Docker sur ACR
       - name: Build and Push Docker Image
         run: |
-          az acr login --name ${{ secrets.ACR_NAME }}
-          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/sentiment-analysis:latest .
-          docker push ${{ secrets.ACR_NAME }}.azurecr.io/sentiment-analysis:latest
+          az acr build \
+            --registry ${{ secrets.ACR_NAME }} \
+            --image ${{ secrets.ACR_NAME }}/sentiment-analysis:latest .
 
       # Déployer l'image sur App Service
-      - name: Deploy to App Service
+      - name: Deploy Image to Web App
         run: |
           az webapp config container set \
             --name ${{ secrets.APP_SERVICE_NAME }} \
             --resource-group SentimentAnalysisGroup \
             --docker-custom-image-name ${{ secrets.ACR_NAME }}.azurecr.io/sentiment-analysis:latest \
             --docker-registry-server-url https://${{ secrets.ACR_NAME }}.azurecr.io \
-            --docker-registry-server-user ${{ secrets.ACR_NAME }} \
-            --docker-registry-server-password $(echo ${{ secrets.AZURE_CREDENTIALS }} | jq -r '.clientSecret')
+            --docker-registry-server-user ${{ secrets.AZURE_CREDENTIALS.CLIENT_ID }} \
+            --docker-registry-server-password ${{ secrets.AZURE_CREDENTIALS.CLIENT_SECRET }}
