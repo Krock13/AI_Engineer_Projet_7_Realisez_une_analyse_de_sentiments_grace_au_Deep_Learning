@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import joblib
 import os
+from utils import clean_tweet, preprocess_text
 
 # Initialiser l'application FastAPI
 app = FastAPI(title="Sentiment Analysis API", version="1.0")
@@ -29,8 +30,11 @@ def predict(request: SentimentRequest):
     if not request.text.strip():
         raise HTTPException(status_code=400, detail="Le texte fourni est vide.")
 
+    tweet = request.text
+    tweet = clean_tweet(tweet)
+    tweet = preprocess_text(tweet)
     # Transformer le texte avec le vectorizer
-    text_vectorized = vectorizer.transform([request.text])
+    text_vectorized = vectorizer.transform([tweet])
 
     # Faire la prédiction
     prediction = model.predict(text_vectorized)

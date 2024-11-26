@@ -2,6 +2,7 @@
 
 # Notebooks Jupyter
 *.ipynb
+notebooks/
 
 # Dossier contenant les caches de pytest
 .pytest_cache/

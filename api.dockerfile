@@ -7,6 +7,7 @@ WORKDIR /app
 # Copier uniquement ce qui est nécessaire
 COPY .dockerignore /app/.dockerignore
 COPY main.py /app/
+COPY utils.py /app/
 COPY requirements-docker.txt /app/
 COPY saved_models/logistic_regression_tf-idf.pkl /app/saved_models/
 COPY saved_models/tf-idf_vectorizer.pkl /app/saved_models/
