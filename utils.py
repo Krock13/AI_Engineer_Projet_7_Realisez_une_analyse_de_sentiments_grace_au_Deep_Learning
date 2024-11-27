@@ -1,12 +1,6 @@
 import re
-# Importer les bibliothèques de traitement du langage naturel (NLP)
-import nltk
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
-
-# Télécharger les ressources nécessaires pour NLTK
-nltk.download('stopwords')
-nltk.download('wordnet')
 
 def clean_tweet(text):
     # Enlever les mentions @pseudo

@@ -15,6 +15,9 @@ COPY saved_models/tf-idf_vectorizer.pkl /app/saved_models/
 # Installer uniquement les dépendances nécessaires
 RUN pip install --no-cache-dir -r requirements-docker.txt
 
+# Télécharger les ressources nécessaires pour NLTK
+RUN python -m nltk.downloader stopwords wordnet
+
 # Exposer le port utilisé par FastAPI
 EXPOSE 8000
 
