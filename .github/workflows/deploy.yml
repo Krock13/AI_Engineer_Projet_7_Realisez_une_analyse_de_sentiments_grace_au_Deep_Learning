@@ -10,32 +10,32 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Étape 1 :
+      # Étape 1 : Récupérer le code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Étape 2 : Login to Azure
+      # Étape 2 : Connexion à Azure
       - name: Login to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      # Étape 3 : Login to ACR
+      # Étape 3 : Connexion au registre ACR
       - name: Login to ACR
         run: |
           az acr login --name ${{ secrets.ACR_NAME }}
 
-      # Étape 4 : Build Docker image locally
+      # Étape 4 : Construire l'image Docker avec api.dockerfile
       - name: Build Docker Image
         run: |
-          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/sentiment-analysis:latest .
+          docker build -t ${{ secrets.ACR_NAME }}.azurecr.io/sentiment-analysis:latest -f api.dockerfile .
 
-      # Étape 5 : Push Docker image to ACR
+      # Étape 5 : Pousser l'image dans ACR
       - name: Push Docker Image
         run: |
           docker push ${{ secrets.ACR_NAME }}.azurecr.io/sentiment-analysis:latest
 
-      # Étape 6 : Configure App Service to use the Docker image
+      # Étape 6 : Configurer l'App Service pour utiliser l'image Docker
       - name: Deploy Image to Web App
         run: |
           az webapp config container set \
