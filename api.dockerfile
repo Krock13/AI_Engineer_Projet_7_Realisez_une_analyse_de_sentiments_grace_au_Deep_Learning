@@ -7,12 +7,16 @@ WORKDIR /app
 # Copier uniquement ce qui est nécessaire
 COPY .dockerignore /app/.dockerignore
 COPY main.py /app/
+COPY utils.py /app/
 COPY requirements-docker.txt /app/
 COPY saved_models/logistic_regression_tf-idf.pkl /app/saved_models/
 COPY saved_models/tf-idf_vectorizer.pkl /app/saved_models/
 
 # Installer uniquement les dépendances nécessaires
 RUN pip install --no-cache-dir -r requirements-docker.txt
+
+# Télécharger les ressources nécessaires pour NLTK
+RUN python -m nltk.downloader stopwords wordnet
 
 # Exposer le port utilisé par FastAPI
 EXPOSE 8000
