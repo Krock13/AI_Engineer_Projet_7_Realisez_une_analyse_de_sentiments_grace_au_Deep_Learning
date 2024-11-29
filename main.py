@@ -2,15 +2,29 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import joblib
 import os
+from opencensus.ext.azure.log_exporter import AzureLogHandler
 import logging
 from utils import clean_tweet, preprocess_text
 
-# Initialiser l'application FastAPI
-app = FastAPI(title="Sentiment Analysis API", version="1.1")
+# Configuration de Application Insights
+INSTRUMENTATION_KEY = os.getenv("InstrumentationKey")
 
-# Configurer le logger
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("sentiment_analysis_app")
+logger.setLevel(logging.INFO)
+
+# Ajouter un gestionnaire pour envoyer les logs à Application Insights
+azure_handler = AzureLogHandler(connection_string=INSTRUMENTATION_KEY)
+logger.addHandler(azure_handler)
+
+# Configurer le logger pour afficher les messages localement aussi
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
+
+# Initialiser l'application FastAPI
+app = FastAPI(title="Sentiment Analysis API", version="1.2")
 
 # Charger le modèle et le vectorizer
 model_path = "saved_models/logistic_regression_tf-idf.pkl"
@@ -31,11 +45,13 @@ class SentimentRequest(BaseModel):
 
 @app.get("/")
 def root():
+    logger.info("Requête reçue sur la route racine.")
     return {"message": "Bienvenue dans l'API d'analyse de sentiment !"}
 
 @app.post("/predict")
 def predict(request: SentimentRequest):
     if not request.text.strip():
+        logger.warning("Texte vide reçu dans la requête.")
         raise HTTPException(status_code=400, detail="Le texte fourni est vide.")
 
     # Étape 1 : Nettoyage du tweet
@@ -49,6 +65,7 @@ def predict(request: SentimentRequest):
     logger.info(f"Tweet prétraité : {tweet}")
 
     if not tweet.strip():
+        logger.warning("Le texte est vide après le nettoyage et le prétraitement.")
         raise HTTPException(status_code=400, detail="Le texte nettoyé est vide après prétraitement.")
 
     # Étape 3 : Vectorisation
@@ -64,6 +81,6 @@ def predict(request: SentimentRequest):
     sentiment_label = "positive" if prediction[0] == 1 else "negative"
     confidence = probabilities[0][prediction[0]]
 
-    logger.info(f"Sentiment : {sentiment_label}, Confiance : {confidence:.2f}")
+    logger.info(f"Prédiction terminée. Sentiment : {sentiment_label}, Confiance : {confidence:.2f}")
 
     return {"sentiment": sentiment_label, "confidence": f"{confidence:.2f}"}
