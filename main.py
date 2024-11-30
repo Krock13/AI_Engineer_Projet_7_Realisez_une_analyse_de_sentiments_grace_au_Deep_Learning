@@ -30,6 +30,9 @@ if not IS_TESTING:
     azure_handler = AzureLogHandler(connection_string=INSTRUMENTATION_KEY)
     logger.addHandler(azure_handler)
 
+    # Log pour tester la connexion avec Application Insights
+    logger.info("Test de connexion Application Insights.")
+
 # Initialiser l'application FastAPI
 app = FastAPI(title="Sentiment Analysis API", version="1.2")
 
