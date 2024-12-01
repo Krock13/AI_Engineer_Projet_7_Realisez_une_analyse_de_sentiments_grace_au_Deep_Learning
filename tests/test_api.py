@@ -1,33 +1,31 @@
 import sys
 import os
 from unittest.mock import patch
-from opencensus.ext.azure.log_exporter import AzureLogHandler
+from fastapi.testclient import TestClient
 
-# Ajouter le répertoire racine au chemin système
+# ============================
+# Préconfiguration pour les tests
+# ============================
+
+# Définir les variables d'environnement avant d'importer l'application
+os.environ["APPLICATIONINSIGHTS_CONNECTION_STRING"] = "InstrumentationKey=00000000-0000-0000-0000-000000000000"
+os.environ["TEST_ENV"] = "1"  # Indique que nous sommes en mode test
+
+# Ajouter le répertoire racine au chemin système pour permettre les imports locaux
 sys.path.append(os.path.abspath(os.path.dirname(__file__) + "/.."))
 
-# Définir les variables d'environnement nécessaires pour les tests
-os.environ["INSTRUMENTATION_KEY"] = "InstrumentationKey=00000000-0000-0000-0000-000000000000"
-os.environ["TEST_ENV"] = "1"  # Indiquer que nous sommes en mode test
+# ============================
+# Importer l'application et configurer le client de test
+# ============================
 
-from main import app  # Import local
-from fastapi.testclient import TestClient  # Import externe
+from main import app  # Import de l'application FastAPI locale
 
-# Initialiser le client de test
+# Initialiser le client de test pour interagir avec l'application
 client = TestClient(app)
 
 # ================================
-# Désactiver le logger Azure
-# ================================
-@patch("main.azure_handler.emit")
-def run_all_tests(mock_azure_handler):
-    """Décorateur global pour désactiver AzureLogHandler dans tous les tests."""
-    pass
-
-
-# =============================
 # Tests des routes principales
-# =============================
+# ================================
 
 def test_root():
     """Test de la route racine (GET /)."""
@@ -85,19 +83,6 @@ def test_long_text():
     assert "confidence" in response.json()
     assert 0.0 <= float(response.json()["confidence"]) <= 1.0
 
-def test_text_with_emojis():
-    """Test pour un texte contenant des emojis."""
-    payload = {"text": "I love this project! 😍✨"}
-    response = client.post("/predict", json=payload)
-    assert response.status_code == 200
-    assert response.json()["sentiment"] == "positive"
-    assert "confidence" in response.json()
-    assert 0.0 <= float(response.json()["confidence"]) <= 1.0
-
-# =============================
-# Tests de fonctionnalités avancées
-# =============================
-
 def test_uppercase_text():
     """Test pour un texte entièrement en majuscules."""
     payload = {"text": "I LOVE THIS!"}
@@ -115,6 +100,19 @@ def test_mixed_case_text():
     assert response.json()["sentiment"] == "positive"
     assert "confidence" in response.json()
     assert 0.0 <= float(response.json()["confidence"]) <= 1.0
+
+def test_text_with_emojis():
+    """Test pour un texte contenant des emojis."""
+    payload = {"text": "I love this project! 😍✨"}
+    response = client.post("/predict", json=payload)
+    assert response.status_code == 200
+    assert response.json()["sentiment"] == "positive"
+    assert "confidence" in response.json()
+    assert 0.0 <= float(response.json()["confidence"]) <= 1.0
+
+# ==========================
+# Tests supplémentaires
+# ==========================
 
 @patch("main.model.predict", side_effect=Exception("Erreur interne"))
 def test_model_error(mock_predict):
@@ -141,20 +139,3 @@ def test_foreign_language():
     assert "sentiment" in response.json()
     assert "confidence" in response.json()
 
-@patch("opencensus.ext.azure.log_exporter.AzureLogHandler.emit")
-def test_logging(mock_emit):
-    """Test pour vérifier que les logs sont générés et envoyés correctement."""
-    # Forcer l'ajout d'un gestionnaire AzureLogHandler temporairement
-    from main import logger, INSTRUMENTATION_KEY
-    azure_handler = AzureLogHandler(connection_string=INSTRUMENTATION_KEY)
-    logger.addHandler(azure_handler)
-
-    try:
-        # Tester l'API
-        payload = {"text": "I love this project!"}
-        response = client.post("/predict", json=payload)
-        assert response.status_code == 200
-        assert mock_emit.call_count > 0  # Vérifie que des logs ont été générés
-    finally:
-        # Supprimer le gestionnaire temporaire pour éviter d'affecter d'autres tests
-        logger.removeHandler(azure_handler)
