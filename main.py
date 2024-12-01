@@ -2,39 +2,56 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import joblib
 import os
-from opencensus.ext.azure.log_exporter import AzureLogHandler
 import logging
 from utils import clean_tweet, preprocess_text
 
-# Récupérer la clé d'instrumentation à partir des variables d'environnement
-INSTRUMENTATION_KEY = os.getenv("INSTRUMENTATION_KEY")
+# Importer les outils OpenTelemetry
+from opentelemetry import trace
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from opentelemetry.sdk.resources import Resource
+from azure.monitor.opentelemetry.exporter import AzureMonitorTraceExporter
 
-# Configurer Application Insights
+# Configurer OpenTelemetry avec un nom de service
+resource = Resource(attributes={
+    "service.name": "sentiment-analysis-app"
+})
+trace.set_tracer_provider(TracerProvider(resource=resource))
+tracer_provider = trace.get_tracer_provider()
+
+# Configurer l'exportateur pour Azure Monitor
+connection_string = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
+if not connection_string:
+    raise ValueError("La variable d'environnement 'APPLICATIONINSIGHTS_CONNECTION_STRING' est manquante.")
+
+# Désactiver Azure Monitor en mode test
+if os.getenv("TEST_ENV") != "1":
+    connection_string = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
+    if not connection_string:
+        raise ValueError("La variable d'environnement 'APPLICATIONINSIGHTS_CONNECTION_STRING' est manquante.")
+
+    exporter = AzureMonitorTraceExporter.from_connection_string(connection_string)
+    span_processor = BatchSpanProcessor(exporter)
+    tracer_provider.add_span_processor(span_processor)
+else:
+    # Ajout d'un exporteur fictif pour les tests
+    print("Azure Monitor désactivé pour les tests.")
+
+# Configurer le logger
 logger = logging.getLogger("sentiment_analysis_app")
 logger.setLevel(logging.INFO)
-
-# Détecter si les tests sont en cours d'exécution
-IS_TESTING = os.getenv("TEST_ENV", False)
-
-# Configurer le logger pour afficher les messages localement aussi
 console_handler = logging.StreamHandler()
 console_handler.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
-# Ajouter un gestionnaire pour Application Insights
-if not IS_TESTING:
-    if not INSTRUMENTATION_KEY:
-        raise ValueError("INSTRUMENTATION_KEY est manquant dans les variables d'environnement.")
-    azure_handler = AzureLogHandler(connection_string=INSTRUMENTATION_KEY)
-    logger.addHandler(azure_handler)
-
-    # Log pour tester la connexion avec Application Insights
-    logger.info("Test de connexion Application Insights.")
-
 # Initialiser l'application FastAPI
-app = FastAPI(title="Sentiment Analysis API", version="1.2")
+app = FastAPI(title="Sentiment Analysis API", version="1.4")
+
+# Instrumenter FastAPI pour OpenTelemetry
+FastAPIInstrumentor.instrument_app(app)
 
 # Charger le modèle et le vectorizer
 model_path = "saved_models/logistic_regression_tf-idf.pkl"
@@ -55,7 +72,6 @@ class SentimentRequest(BaseModel):
 
 @app.get("/")
 def root():
-    logger.info("Requête reçue sur la route racine.")
     return {"message": "Bienvenue dans l'API d'analyse de sentiment !"}
 
 @app.post("/predict")
@@ -66,14 +82,10 @@ def predict(request: SentimentRequest):
 
     try:
         # Étape 1 : Nettoyage du tweet
-        logger.info("Nettoyage du tweet...")
         tweet = clean_tweet(request.text)
-        logger.info(f"Tweet nettoyé : {tweet}")
 
         # Étape 2 : Prétraitement du tweet
-        logger.info("Prétraitement du tweet...")
         tweet = preprocess_text(tweet)
-        logger.info(f"Tweet prétraité : {tweet}")
 
         if not tweet.strip():
             logger.warning("Le texte est vide après le nettoyage et le prétraitement.")
@@ -83,11 +95,9 @@ def predict(request: SentimentRequest):
             )
 
         # Étape 3 : Vectorisation
-        logger.info("Vectorisation du tweet...")
         text_vectorized = vectorizer.transform([tweet])
 
         # Étape 4 : Prédiction
-        logger.info("Prédiction du sentiment...")
         prediction = model.predict(text_vectorized)
         probabilities = model.predict_proba(text_vectorized)
 
@@ -105,5 +115,6 @@ def predict(request: SentimentRequest):
         raise e
 
     except Exception as e:
+        # Capturer les erreurs inattendues
         logger.error(f"Erreur interne lors de la prédiction : {e}")
         raise HTTPException(status_code=500, detail="Erreur interne lors de la prédiction.")
