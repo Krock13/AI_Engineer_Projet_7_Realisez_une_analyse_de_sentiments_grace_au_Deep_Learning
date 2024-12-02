@@ -1,11 +1,10 @@
-azure-monitor-opentelemetry-exporter==1.0.0b32
+azure-monitor-opentelemetry==1.6.4
 fastapi==0.115.4
 joblib==1.4.2
-numpy==1.26.4
 nltk==3.9.1
-opentelemetry-api==1.28.1
-opentelemetry-sdk==1.28.1
-opentelemetry-instrumentation-fastapi==0.49b1
+numpy==1.26.4
+opentelemetry-api==1.28.2
+opentelemetry-sdk==1.28.2
 pandas==2.2.3
 scikit-learn==1.5.2
 uvicorn==0.32.0
