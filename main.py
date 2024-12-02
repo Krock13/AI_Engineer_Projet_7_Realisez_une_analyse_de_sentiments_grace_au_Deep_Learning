@@ -20,6 +20,9 @@ resource = Resource(attributes={
 trace.set_tracer_provider(TracerProvider(resource=resource))
 tracer_provider = trace.get_tracer_provider()
 
+# Obtenir une instance de tracer
+tracer = trace.get_tracer(__name__)
+
 # Configurer l'exportateur pour Azure Monitor
 connection_string = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")
 if not connection_string:
@@ -78,6 +81,11 @@ def root():
 def predict(request: SentimentRequest):
     if not request.text.strip():
         logger.warning("Texte vide reçu dans la requête.")
+        # Ajout d'une trace OpenTelemetry pour le texte vide
+        with tracer.start_as_current_span("EmptyTextError"):
+            span = trace.get_current_span()
+            span.set_attribute("error.type", "ValidationError")
+            span.set_attribute("error.message", "Texte vide reçu dans la requête")
         raise HTTPException(status_code=400, detail="Le texte fourni est vide.")
 
     try:
@@ -89,6 +97,11 @@ def predict(request: SentimentRequest):
 
         if not tweet.strip():
             logger.warning("Le texte est vide après le nettoyage et le prétraitement.")
+            # Ajout d'une trace OpenTelemetry pour le prétraitement échoué
+            with tracer.start_as_current_span("PreprocessingError"):
+                span = trace.get_current_span()
+                span.set_attribute("error.type", "PreprocessingError")
+                span.set_attribute("error.message", "Le texte nettoyé est vide après prétraitement.")
             raise HTTPException(
                 status_code=400, 
                 detail="Le texte nettoyé est vide après prétraitement."
@@ -107,14 +120,27 @@ def predict(request: SentimentRequest):
 
         logger.info(f"Prédiction terminée. Sentiment : {sentiment_label}, Confiance : {confidence:.2f}")
 
+        # Ajout d'une trace pour une prédiction correcte
+        with tracer.start_as_current_span("PredictionSuccess"):
+            span = trace.get_current_span()
+            span.set_attribute("prediction.sentiment", sentiment_label)
+            span.set_attribute("prediction.confidence", confidence)
         return {"sentiment": sentiment_label, "confidence": f"{confidence:.2f}"}
 
     except HTTPException as e:
         # Laisser passer les erreurs HTTP intentionnelles
         logger.error(f"Erreur HTTP intentionnelle : {e.detail}")
+        with tracer.start_as_current_span("HTTPException"):
+            span = trace.get_current_span()
+            span.set_attribute("error.type", "HTTPException")
+            span.set_attribute("error.message", e.detail)
         raise e
 
     except Exception as e:
         # Capturer les erreurs inattendues
         logger.error(f"Erreur interne lors de la prédiction : {e}")
+        with tracer.start_as_current_span("InternalServerError"):
+            span = trace.get_current_span()
+            span.set_attribute("error.type", "InternalServerError")
+            span.set_attribute("error.message", str(e))
         raise HTTPException(status_code=500, detail="Erreur interne lors de la prédiction.")
