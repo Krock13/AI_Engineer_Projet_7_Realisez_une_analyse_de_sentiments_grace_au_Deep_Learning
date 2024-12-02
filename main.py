@@ -22,6 +22,12 @@ formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
+# Définir le modèle de requête pour /log_trace
+class TraceRequest(BaseModel):
+    text: str
+    predicted_sentiment: str
+    confidence: str
+
 # Initialiser l'application FastAPI
 app = FastAPI(title="Sentiment Analysis API", version="1.5")
 
@@ -95,3 +101,27 @@ def predict(request: SentimentRequest):
     except Exception as e:
         logger.error(f"Erreur interne lors de la prédiction : {e}")
         raise HTTPException(status_code=500, detail="Erreur interne lors de la prédiction.")
+
+@app.post("/log_trace")
+def log_trace(request: TraceRequest):
+    """
+    Endpoint pour enregistrer une trace en cas de prédiction incorrecte.
+    """
+    try:
+        with tracer.start_as_current_span("PredictionErrorTrace") as span:
+            # Ajouter les attributs au span
+            span.set_attribute("event.type", "prediction_incorrect")
+            span.set_attribute("text", request.text)
+            span.set_attribute("predicted_sentiment", request.predicted_sentiment)
+            span.set_attribute("confidence", request.confidence)
+            span.set_attribute("message", "Prédiction signalée comme incorrecte par l'utilisateur.")
+
+            # Log dans la console pour confirmation
+            logger.warning(f"Prédiction incorrecte signalée : {request.text} "
+                           f"(Sentiment : {request.predicted_sentiment}, Confiance : {request.confidence})")
+
+        return {"message": "Trace enregistrée avec succès dans Azure Application Insight"}
+
+    except Exception as e:
+        logger.error(f"Erreur lors de l'enregistrement de la trace : {e}")
+        raise HTTPException(status_code=500, detail="Erreur interne lors de l'enregistrement de la trace.")
