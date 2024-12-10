@@ -29,7 +29,7 @@ class TraceRequest(BaseModel):
     confidence: str
 
 # Initialiser l'application FastAPI
-app = FastAPI(title="Sentiment Analysis API", version="1.5")
+app = FastAPI(title="Sentiment Analysis API", version="1.6")
 
 # Charger le modèle et le vectorizer
 model_path = "saved_models/logistic_regression_tf-idf.pkl"
