@@ -31,7 +31,7 @@ if st.button("Analyser le tweet"):
         try:
             # Log avant l'appel
             logger.info(f"Envoi de la requête POST à {API_URL} avec le texte : {st.session_state.tweet_input}")
-            
+
             # Appel à l'API
             with st.spinner("Analyse en cours..."):
                 response = requests.post(
@@ -39,7 +39,7 @@ if st.button("Analyser le tweet"):
                     json={"text": st.session_state.tweet_input},
                     headers={"Content-Type": "application/json"}
                 )
-            
+
             # Gestion des réponses
             if response.status_code == 200:
                 data = response.json()
@@ -72,7 +72,7 @@ if st.session_state.prediction and not st.session_state.action_taken:
         st.session_state.action_taken = True
 
     if st.button("Prédiction incorrecte"):
-        st.error("Erreur signalée ! Trace envoyée.")
+        # st.error("Erreur signalée ! Trace envoyée.")
         logger.warning(f"L'utilisateur a signalé une erreur pour le texte : {st.session_state.tweet_input}")
         st.session_state.action_taken = True
 
