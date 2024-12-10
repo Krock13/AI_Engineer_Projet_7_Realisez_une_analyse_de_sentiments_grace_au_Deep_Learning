@@ -1,5 +1,6 @@
 # Environnement virtuel
 projet_7_env/
+clean_env/
 
 # Cache Python
 __pycache__/
